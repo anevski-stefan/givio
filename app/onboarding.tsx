@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, {
     useAnimatedStyle,
     interpolate,
@@ -137,16 +136,19 @@ export default function OnboardingScreen() {
 
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            <TouchableOpacity
-                style={styles.skipButton}
-                onPress={handleSkip}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel="Skip onboarding"
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-                <Text style={styles.skipText}>Skip</Text>
-            </TouchableOpacity>
+            <View style={styles.header}>
+                <View style={styles.headerSpacer} />
+                <TouchableOpacity
+                    style={styles.skipButton}
+                    onPress={handleSkip}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Skip onboarding"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    <Text style={styles.skipText}>Skip</Text>
+                </TouchableOpacity>
+            </View>
 
             <FlatList
                 ref={flatListRef}
@@ -183,11 +185,6 @@ export default function OnboardingScreen() {
                     title={currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
                     onPress={handleNext}
                     variant="primary"
-                    iconRight={
-                        currentIndex === slides.length - 1 ? (
-                            <Ionicons name="arrow-forward" size={20} color={Colors.light.primaryForeground} />
-                        ) : null
-                    }
                     accessibilityLabel={
                         currentIndex === slides.length - 1
                             ? 'Get started with Givio'
@@ -254,11 +251,17 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.light.background,
     },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+    },
+    headerSpacer: {
+        width: 50,
+    },
     skipButton: {
-        position: 'absolute',
-        top: 16,
-        right: 20,
-        zIndex: 10,
         paddingVertical: 8,
         paddingHorizontal: 12,
     },

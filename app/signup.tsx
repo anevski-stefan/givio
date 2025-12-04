@@ -208,7 +208,6 @@ export default function SignupScreen() {
                                     autoComplete="name"
                                     textContentType="name"
                                     editable={!isLoading}
-                                    testID="signup-fullname"
                                 />
 
                                 <TextInput
@@ -222,7 +221,6 @@ export default function SignupScreen() {
                                     autoComplete="email"
                                     textContentType="emailAddress"
                                     editable={!isLoading}
-                                    testID="signup-email"
                                 />
 
                                 <TextInput
@@ -237,7 +235,6 @@ export default function SignupScreen() {
                                     autoComplete="new-password"
                                     textContentType="newPassword"
                                     editable={!isLoading}
-                                    testID="signup-password"
                                 />
                             </View>
 
@@ -249,7 +246,6 @@ export default function SignupScreen() {
                                     disabled={isLoading}
                                     style={styles.signupButton}
                                     accessibilityHint="Create a new account"
-                                    testID="signup-submit-button"
                                 />
 
                                 <View style={styles.loginContainer}>

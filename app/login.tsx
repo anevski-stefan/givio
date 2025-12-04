@@ -19,6 +19,7 @@ import GoogleIcon from '@/components/icons/GoogleIcon';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
+import { supabase } from '@/lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -35,6 +36,7 @@ interface FormErrors {
 }
 
 export default function LoginScreen() {
+    const router = useRouter();
     const [formData, setFormData] = useState<FormData>({
         email: '',
         password: '',
@@ -42,7 +44,6 @@ export default function LoginScreen() {
     const [errors, setErrors] = useState<FormErrors>({});
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-    const isSubmittingRef = useRef(false);
 
     const createSessionFromUrl = useCallback(async (url: string) => {
         const { params, errorCode } = QueryParams.getQueryParams(url);
@@ -87,7 +88,8 @@ export default function LoginScreen() {
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Google sign in failed';
-            setErrors({ general: errorMessage });
+            console.error('Google login error:', errorMessage);
+            setErrors({ email: errorMessage });
         } finally {
             setIsGoogleLoading(false);
         }
@@ -188,18 +190,6 @@ export default function LoginScreen() {
                         </View>
 
                         <View style={styles.form}>
-                            <TextInput
-                                label="Email address"
-                                placeholder="name@example.com"
-                                value={formData.email}
-                                onChangeText={handleEmailChange}
-                                error={errors.email}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                autoComplete="email"
-                                textContentType="emailAddress"
-                            />
-
                             <View style={styles.inputsContainer}>
                                 <TextInput
                                     label="Email address"
@@ -228,14 +218,52 @@ export default function LoginScreen() {
                                     editable={!isAnyLoading}
                                 />
 
+                                <TouchableOpacity
+                                    style={styles.forgotPassword}
+                                    accessible={true}
+                                    accessibilityRole="link"
+                                    accessibilityLabel="Forgot password"
+                                    onPress={handleForgotPassword}
+                                    disabled={isAnyLoading}
+                                >
+                                    <Text style={styles.forgotPasswordText}>
+                                        Forgot Password?
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.bottomSection}>
                                 <Button
                                     title="Login"
                                     onPress={handleLogin}
                                     loading={isLoading}
-                                    disabled={isLoading}
+                                    disabled={isAnyLoading}
                                     style={styles.loginButton}
                                     accessibilityHint="Sign in to your account"
                                 />
+
+                                <View style={styles.dividerContainer}>
+                                    <View style={styles.dividerLine} />
+                                    <Text style={styles.dividerText}>or</Text>
+                                    <View style={styles.dividerLine} />
+                                </View>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.googleButton,
+                                        isAnyLoading && styles.googleButtonDisabled,
+                                    ]}
+                                    onPress={handleGoogleLogin}
+                                    disabled={isAnyLoading}
+                                    accessible={true}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Continue with Google"
+                                >
+                                    <GoogleIcon size={20} />
+                                    <Text style={styles.googleButtonText}>
+                                        Continue with Google
+                                    </Text>
+                                </TouchableOpacity>
 
                                 <View style={styles.signupContainer}>
                                     <Text style={styles.signupText}>
@@ -243,9 +271,9 @@ export default function LoginScreen() {
                                     </Text>
                                     <TouchableOpacity
                                         accessible={true}
-                                        accessibilityRole="link"
-                                        accessibilityLabel="Forgot password"
-                                        onPress={handleForgotPassword}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Sign up for a new account"
+                                        onPress={handleSignup}
                                         disabled={isAnyLoading}
                                     >
                                         <Text style={styles.signupLink}>
@@ -253,59 +281,9 @@ export default function LoginScreen() {
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
-
-                                <View style={styles.bottomSection}>
-                                    <Button
-                                        title="Login"
-                                        onPress={handleLogin}
-                                        loading={isLoading}
-                                        disabled={isAnyLoading}
-                                        style={styles.loginButton}
-                                        accessibilityHint="Sign in to your account"
-                                    />
-
-                                    <View style={styles.dividerContainer}>
-                                        <View style={styles.dividerLine} />
-                                        <Text style={styles.dividerText}>or</Text>
-                                        <View style={styles.dividerLine} />
-                                    </View>
-
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.googleButton,
-                                            isAnyLoading && styles.googleButtonDisabled,
-                                        ]}
-                                        onPress={handleGoogleLogin}
-                                        disabled={isAnyLoading}
-                                        accessible={true}
-                                        accessibilityRole="button"
-                                        accessibilityLabel="Continue with Google"
-                                    >
-                                        <GoogleIcon size={20} />
-                                        <Text style={styles.googleButtonText}>
-                                            Continue with Google
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <View style={styles.signupContainer}>
-                                        <Text style={styles.signupText}>
-                                            No account?{' '}
-                                        </Text>
-                                        <TouchableOpacity
-                                            accessible={true}
-                                            accessibilityRole="button"
-                                            accessibilityLabel="Sign up for a new account"
-                                            onPress={handleSignup}
-                                            disabled={isAnyLoading}
-                                        >
-                                            <Text style={styles.signupLink}>
-                                                Sign up
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
                             </View>
                         </View>
+                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>

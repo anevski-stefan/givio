@@ -6,20 +6,20 @@ import {
     TouchableOpacity,
     ScrollView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import LogoIcon from './icons/LogoIcon';
 import GuideIcon from './icons/GuideIcon';
 import GiftBoxIcon from './icons/GiftBoxIcon';
 import Colors from '@/constants/Colors';
 import SeparatorIcon from './icons/SeparatorIcon';
 
-// Using light theme only
 const colors = Colors.light;
 
 export default function WelcomeScreen() {
+    const router = useRouter();
+
     const handleGetStarted = () => {
-        console.log('Get Started pressed');
-        // Navigation disabled for now
-        // router.push('/(tabs)');
+        router.push('/onboarding');
     };
 
     const handleLearnMore = () => {

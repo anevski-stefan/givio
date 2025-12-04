@@ -36,7 +36,7 @@ export interface ColorPalette {
 const Colors = {
   background: '#fdfcf8',
   foreground: '#2d3630',
-  border: 'transparent',
+  border: '#e5e7eb',
   input: '#ffffff',
   primary: '#5c7c66',
   primaryForeground: '#ffffff',
