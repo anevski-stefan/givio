@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
     TextInput as RNTextInput,
     View,
     Text,
     StyleSheet,
-    Pressable,
+    TouchableOpacity,
     TextInputProps as RNTextInputProps,
     Platform,
-    TextInput as RNTextInputRef,
 } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,68 +15,36 @@ interface TextInputProps extends Omit<RNTextInputProps, 'style'> {
     label: string;
     error?: string;
     showPasswordToggle?: boolean;
-    testID?: string;
 }
 
 const MINIMUM_TOUCHABLE_SIZE = 48;
-const DEFAULT_BORDER_COLOR = '#e5e7eb';
 
-export interface TextInputRef {
-    focus: () => void;
-    blur: () => void;
-    clear: () => void;
-    isFocused: () => boolean;
-}
+export default function TextInput({
+    label,
+    error,
+    showPasswordToggle = false,
+    secureTextEntry,
+    value,
+    onChangeText,
+    placeholder,
+    keyboardType,
+    autoCapitalize = 'none',
+    autoComplete,
+    textContentType,
+    ...rest
+}: TextInputProps) {
+    const [isFocused, setIsFocused] = useState(false);
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-const TextInput = forwardRef<TextInputRef, TextInputProps>(
-    (
-        {
-            label,
-            error,
-            showPasswordToggle = false,
-            secureTextEntry,
-            value,
-            onChangeText,
-            placeholder,
-            keyboardType,
-            autoCapitalize = 'none',
-            autoComplete,
-            textContentType,
-            onFocus,
-            onBlur,
-            testID,
-            ...rest
-        },
-        ref
-    ) => {
-        const [isFocused, setIsFocused] = useState(false);
-        const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-        const inputRef = useRef<RNTextInputRef>(null);
+    const hasError = !!error;
+    const isSecure = secureTextEntry && !isPasswordVisible;
 
-        useImperativeHandle(ref, () => ({
-            focus: () => inputRef.current?.focus(),
-            blur: () => inputRef.current?.blur(),
-            clear: () => {
-                inputRef.current?.clear();
-                onChangeText?.('');
-            },
-            isFocused: () => isFocused,
-        }));
-
-        useEffect(() => {
-            if (!secureTextEntry) {
-                setIsPasswordVisible(false);
-            }
-        }, [secureTextEntry]);
-
-        const hasError = !!error;
-        const isSecure = secureTextEntry && !isPasswordVisible;
-
+    const dynamicStyles = useMemo(() => {
         const borderColor = hasError
             ? Colors.light.destructive
             : isFocused
                 ? Colors.light.primary
-                : DEFAULT_BORDER_COLOR;
+                : Colors.light.border || '#e5e7eb';
 
         const labelColor = hasError
             ? Colors.light.destructive
@@ -85,97 +52,81 @@ const TextInput = forwardRef<TextInputRef, TextInputProps>(
                 ? Colors.light.primary
                 : Colors.light.foreground;
 
-        const handleFocus = (e: any) => {
-            setIsFocused(true);
-            onFocus?.(e);
-        };
+        return { borderColor, labelColor };
+    }, [hasError, isFocused]);
 
-        const handleBlur = (e: any) => {
-            setIsFocused(false);
-            onBlur?.(e);
-        };
+    const handleFocus = useCallback(() => setIsFocused(true), []);
+    const handleBlur = useCallback(() => setIsFocused(false), []);
+    const togglePasswordVisibility = useCallback(
+        () => setIsPasswordVisible((prev) => !prev),
+        []
+    );
 
-        const togglePasswordVisibility = () => {
-            setIsPasswordVisible((prev) => !prev);
-        };
-
-        const inputId = testID ? `${testID}-input` : undefined;
-        const errorId = testID ? `${testID}-error` : undefined;
-
-        return (
-            <View style={styles.container} testID={testID}>
-                <Text
-                    style={[styles.label, { color: labelColor }]}
-                    nativeID={`${testID || 'input'}-label`}
-                >
-                    {label}
-                </Text>
-                <View style={styles.inputWrapper}>
-                    <RNTextInput
-                        ref={inputRef}
-                        style={[
-                            styles.input,
-                            {
-                                borderColor,
-                                paddingRight: showPasswordToggle ? 48 : 16,
-                            },
-                        ]}
-                        value={value}
-                        onChangeText={onChangeText}
-                        placeholder={placeholder}
-                        placeholderTextColor={Colors.light.mutedForeground}
-                        secureTextEntry={isSecure}
-                        onFocus={handleFocus}
-                        onBlur={handleBlur}
-                        keyboardType={keyboardType}
-                        autoCapitalize={autoCapitalize}
-                        autoComplete={autoComplete}
-                        textContentType={textContentType}
+    return (
+        <View style={styles.container}>
+            <Text
+                style={[styles.label, { color: dynamicStyles.labelColor }]}
+                accessibilityRole="text"
+            >
+                {label}
+            </Text>
+            <View style={styles.inputWrapper}>
+                <RNTextInput
+                    style={[
+                        styles.input,
+                        {
+                            borderColor: dynamicStyles.borderColor,
+                            paddingRight: showPasswordToggle ? 48 : 16,
+                        },
+                    ]}
+                    value={value}
+                    onChangeText={onChangeText}
+                    placeholder={placeholder}
+                    placeholderTextColor={Colors.light.mutedForeground}
+                    secureTextEntry={isSecure}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    keyboardType={keyboardType}
+                    autoCapitalize={autoCapitalize}
+                    autoComplete={autoComplete}
+                    textContentType={textContentType}
+                    accessible={true}
+                    accessibilityLabel={`${label} input field`}
+                    accessibilityState={{ disabled: rest.editable === false }}
+                    accessibilityHint={error ? `Error: ${error}` : undefined}
+                    {...rest}
+                />
+                {showPasswordToggle && (
+                    <TouchableOpacity
+                        style={styles.passwordToggle}
+                        onPress={togglePasswordVisibility}
                         accessible={true}
-                        accessibilityLabel={error ? `${label}. ${error}` : label}
-                        accessibilityState={{ disabled: rest.editable === false }}
-                        testID={inputId}
-                        {...rest}
-                    />
-                    {showPasswordToggle && (
-                        <Pressable
-                            style={styles.passwordToggle}
-                            onPress={togglePasswordVisibility}
-                            accessible={true}
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                                isPasswordVisible ? 'Hide password' : 'Show password'
-                            }
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            testID={testID ? `${testID}-password-toggle` : undefined}
-                        >
-                            <Ionicons
-                                name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
-                                size={20}
-                                color={Colors.light.mutedForeground}
-                            />
-                        </Pressable>
-                    )}
-                </View>
-                {hasError && (
-                    <Text
-                        style={styles.error}
-                        accessibilityRole="alert"
-                        accessibilityLiveRegion="polite"
-                        nativeID={errorId}
-                        testID={errorId}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                            isPasswordVisible ? 'Hide password' : 'Show password'
+                        }
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        {error}
-                    </Text>
+                        <Ionicons
+                            name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
+                            size={20}
+                            color={Colors.light.mutedForeground}
+                        />
+                    </TouchableOpacity>
                 )}
             </View>
-        );
-    }
-);
-
-TextInput.displayName = 'TextInput';
-
-export default TextInput;
+            {hasError && (
+                <Text
+                    style={styles.error}
+                    accessibilityRole="alert"
+                    accessibilityLiveRegion="polite"
+                >
+                    {error}
+                </Text>
+            )}
+        </View>
+    );
+}
 
 const styles = StyleSheet.create({
     container: {
@@ -185,14 +136,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
         marginBottom: 8,
-        marginLeft: 4,
         letterSpacing: 0.2,
     },
     inputWrapper: {
         position: 'relative',
     },
     input: {
-        minHeight: MINIMUM_TOUCHABLE_SIZE,
+        height: MINIMUM_TOUCHABLE_SIZE,
         borderWidth: 1,
         borderRadius: 12,
         paddingHorizontal: 16,
@@ -204,7 +154,7 @@ const styles = StyleSheet.create({
                 paddingVertical: 12,
             },
             android: {
-                paddingVertical: 8,
+                paddingVertical: 0,
             },
         }),
     },

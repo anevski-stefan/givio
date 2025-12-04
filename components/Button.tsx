@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
-    Pressable,
+    TouchableOpacity,
     Text,
     StyleSheet,
     ActivityIndicator,
     ViewStyle,
     TextStyle,
-    View,
 } from 'react-native';
 import Colors from '@/constants/Colors';
 
@@ -20,9 +19,6 @@ interface ButtonProps {
     textStyle?: TextStyle;
     accessibilityLabel?: string;
     accessibilityHint?: string;
-    iconLeft?: React.ReactNode;
-    iconRight?: React.ReactNode;
-    testID?: string;
 }
 
 const MINIMUM_TOUCHABLE_SIZE = 48;
@@ -37,91 +33,69 @@ export default function Button({
     textStyle,
     accessibilityLabel,
     accessibilityHint,
-    iconLeft,
-    iconRight,
-    testID,
 }: ButtonProps) {
     const isDisabled = disabled || loading;
 
-    const handlePress = () => {
-        if (!isDisabled && onPress) {
-            onPress();
-        }
-    };
+    const buttonStyle = useMemo(
+        () => [
+            styles.button,
+            variant === 'primary' && styles.primaryButton,
+            variant === 'secondary' && styles.secondaryButton,
+            variant === 'ghost' && styles.ghostButton,
+            isDisabled && styles.disabledButton,
+            style,
+        ],
+        [variant, isDisabled, style]
+    );
 
-    const buttonStyle = [
-        styles.button,
-        variant === 'primary' && styles.primaryButton,
-        variant === 'secondary' && styles.secondaryButton,
-        variant === 'ghost' && styles.ghostButton,
-        isDisabled && styles.disabledButton,
-        style,
-    ];
+    const textStyles = useMemo(
+        () => [
+            styles.text,
+            variant === 'primary' && styles.primaryText,
+            variant === 'secondary' && styles.secondaryText,
+            variant === 'ghost' && styles.ghostText,
+            isDisabled && styles.disabledText,
+            textStyle,
+        ],
+        [variant, isDisabled, textStyle]
+    );
 
-    const textStyles = [
-        styles.text,
-        variant === 'primary' && styles.primaryText,
-        variant === 'secondary' && styles.secondaryText,
-        variant === 'ghost' && styles.ghostText,
-        textStyle,
-    ];
-
-    const spinnerColor =
-        variant === 'primary'
-            ? Colors.light.primaryForeground
-            : Colors.light.primary;
+    const spinnerColor = useMemo(
+        () =>
+            variant === 'primary'
+                ? Colors.light.primaryForeground
+                : Colors.light.primary,
+        [variant]
+    );
 
     return (
-        <Pressable
-            style={({ pressed }) => [
-                ...buttonStyle,
-                pressed && !isDisabled && styles.pressed,
-            ]}
-            onPress={handlePress}
+        <TouchableOpacity
+            style={buttonStyle}
+            onPress={onPress}
             disabled={isDisabled}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel || title}
             accessibilityHint={accessibilityHint}
             accessibilityState={{ disabled: isDisabled, busy: loading }}
-            testID={testID}
+            activeOpacity={0.7}
         >
             {loading ? (
                 <ActivityIndicator color={spinnerColor} />
             ) : (
-                <View style={styles.contentContainer}>
-                    {iconLeft && <View style={styles.iconLeftContainer}>{iconLeft}</View>}
-                    <Text style={textStyles}>{title}</Text>
-                    {iconRight && <View style={styles.iconRightContainer}>{iconRight}</View>}
-                </View>
+                <Text style={textStyles}>{title}</Text>
             )}
-        </Pressable>
+        </TouchableOpacity>
     );
 }
 
 const styles = StyleSheet.create({
     button: {
-        minHeight: MINIMUM_TOUCHABLE_SIZE,
+        height: MINIMUM_TOUCHABLE_SIZE,
         borderRadius: 24,
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 24,
-        paddingVertical: 12,
-    },
-    pressed: {
-        opacity: 0.8,
-    },
-    contentContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    iconLeftContainer: {
-        marginRight: 4,
-    },
-    iconRightContainer: {
-        marginLeft: 4,
     },
     primaryButton: {
         backgroundColor: Colors.light.primary,
@@ -150,5 +124,7 @@ const styles = StyleSheet.create({
     },
     ghostText: {
         color: Colors.light.primary,
+    },
+    disabledText: {
     },
 });
