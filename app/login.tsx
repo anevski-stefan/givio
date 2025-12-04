@@ -10,10 +10,19 @@ import {
     Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import LogoIcon from '@/components/icons/LogoIcon';
+import GoogleIcon from '@/components/icons/GoogleIcon';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const redirectTo = makeRedirectUri();
 
 interface FormData {
     email: string;
@@ -32,6 +41,57 @@ export default function LoginScreen() {
     });
     const [errors, setErrors] = useState<FormErrors>({});
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    const isSubmittingRef = useRef(false);
+
+    const createSessionFromUrl = useCallback(async (url: string) => {
+        const { params, errorCode } = QueryParams.getQueryParams(url);
+        if (errorCode) throw new Error(errorCode);
+        const { access_token, refresh_token } = params;
+        if (!access_token) return null;
+
+        const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+        });
+        if (error) throw error;
+        return data.session;
+    }, []);
+
+    const handleGoogleLogin = useCallback(async () => {
+        if (isGoogleLoading || isLoading) return;
+
+        setIsGoogleLoading(true);
+        setErrors({});
+
+        try {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo,
+                    skipBrowserRedirect: true,
+                },
+            });
+
+            if (error) throw error;
+
+            const res = await WebBrowser.openAuthSessionAsync(
+                data?.url ?? '',
+                redirectTo
+            );
+
+            if (res.type === 'success') {
+                const { url } = res;
+                await createSessionFromUrl(url);
+                router.replace('/(tabs)');
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Google sign in failed';
+            setErrors({ general: errorMessage });
+        } finally {
+            setIsGoogleLoading(false);
+        }
+    }, [isGoogleLoading, isLoading, createSessionFromUrl, router]);
 
     const validateEmail = useCallback((email: string): boolean => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -89,6 +149,16 @@ export default function LoginScreen() {
         setErrors((prev) => ({ ...prev, password: undefined }));
     }, []);
 
+    const handleForgotPassword = useCallback(() => {
+        router.push('/forgot-password' as any);
+    }, [router]);
+
+    const handleSignup = useCallback(() => {
+        router.push('/signup' as any);
+    }, [router]);
+
+    const isAnyLoading = isLoading || isGoogleLoading;
+
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <KeyboardAvoidingView
@@ -130,58 +200,112 @@ export default function LoginScreen() {
                                 textContentType="emailAddress"
                             />
 
-                            <TextInput
-                                label="Password"
-                                placeholder="••••••••"
-                                value={formData.password}
-                                onChangeText={handlePasswordChange}
-                                error={errors.password}
-                                secureTextEntry={true}
-                                showPasswordToggle={true}
-                                autoCapitalize="none"
-                                autoComplete="password"
-                                textContentType="password"
-                            />
+                            <View style={styles.inputsContainer}>
+                                <TextInput
+                                    label="Email address"
+                                    placeholder="name@example.com"
+                                    value={formData.email}
+                                    onChangeText={handleEmailChange}
+                                    error={errors.email}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    autoComplete="email"
+                                    textContentType="emailAddress"
+                                    editable={!isAnyLoading}
+                                />
 
-                            <TouchableOpacity
-                                style={styles.forgotPassword}
-                                accessible={true}
-                                accessibilityRole="link"
-                                accessibilityLabel="Forgot password"
-                            >
-                                <Text style={styles.forgotPasswordText}>
-                                    Forgot Password?
-                                </Text>
-                            </TouchableOpacity>
+                                <TextInput
+                                    label="Password"
+                                    placeholder="••••••••"
+                                    value={formData.password}
+                                    onChangeText={handlePasswordChange}
+                                    error={errors.password}
+                                    secureTextEntry={true}
+                                    showPasswordToggle={true}
+                                    autoCapitalize="none"
+                                    autoComplete="password"
+                                    textContentType="password"
+                                    editable={!isAnyLoading}
+                                />
 
-                            <Button
-                                title="Login"
-                                onPress={handleLogin}
-                                loading={isLoading}
-                                disabled={isLoading}
-                                style={styles.loginButton}
-                                accessibilityHint="Sign in to your account"
-                            />
+                                <Button
+                                    title="Login"
+                                    onPress={handleLogin}
+                                    loading={isLoading}
+                                    disabled={isLoading}
+                                    style={styles.loginButton}
+                                    accessibilityHint="Sign in to your account"
+                                />
 
-                            <View style={styles.signupContainer}>
-                                <Text style={styles.signupText}>
-                                    No account?{' '}
-                                </Text>
-                                <TouchableOpacity
-                                    accessible={true}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Sign up for a new account"
-                                    onPress={() => {
-                                        console.log('Navigate to signup');
-                                    }}
-                                >
-                                    <Text style={styles.signupLink}>
-                                        Sign up
+                                <View style={styles.signupContainer}>
+                                    <Text style={styles.signupText}>
+                                        No account?{' '}
                                     </Text>
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        accessible={true}
+                                        accessibilityRole="link"
+                                        accessibilityLabel="Forgot password"
+                                        onPress={handleForgotPassword}
+                                        disabled={isAnyLoading}
+                                    >
+                                        <Text style={styles.signupLink}>
+                                            Sign up
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.bottomSection}>
+                                    <Button
+                                        title="Login"
+                                        onPress={handleLogin}
+                                        loading={isLoading}
+                                        disabled={isAnyLoading}
+                                        style={styles.loginButton}
+                                        accessibilityHint="Sign in to your account"
+                                    />
+
+                                    <View style={styles.dividerContainer}>
+                                        <View style={styles.dividerLine} />
+                                        <Text style={styles.dividerText}>or</Text>
+                                        <View style={styles.dividerLine} />
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.googleButton,
+                                            isAnyLoading && styles.googleButtonDisabled,
+                                        ]}
+                                        onPress={handleGoogleLogin}
+                                        disabled={isAnyLoading}
+                                        accessible={true}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Continue with Google"
+                                    >
+                                        <GoogleIcon size={20} />
+                                        <Text style={styles.googleButtonText}>
+                                            Continue with Google
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <View style={styles.signupContainer}>
+                                        <Text style={styles.signupText}>
+                                            No account?{' '}
+                                        </Text>
+                                        <TouchableOpacity
+                                            accessible={true}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Sign up for a new account"
+                                            onPress={handleSignup}
+                                            disabled={isAnyLoading}
+                                        >
+                                            <Text style={styles.signupLink}>
+                                                Sign up
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
                             </View>
                         </View>
-                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -226,7 +350,14 @@ const styles = StyleSheet.create({
         letterSpacing: 0.2,
     },
     form: {
-        flex: 1,
+        minHeight: 420,
+        justifyContent: 'space-between',
+    },
+    inputsContainer: {
+        width: '100%',
+    },
+    bottomSection: {
+        width: '100%',
     },
     forgotPassword: {
         alignSelf: 'flex-end',
@@ -240,6 +371,44 @@ const styles = StyleSheet.create({
     },
     loginButton: {
         marginBottom: 20,
+    },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: Colors.light.separatorDots,
+    },
+    dividerText: {
+        paddingHorizontal: 16,
+        fontSize: 14,
+        color: Colors.light.mutedForeground,
+    },
+    googleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.light.white,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: 24,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        minHeight: 48,
+        marginBottom: 16,
+        gap: 12,
+    },
+    googleButtonDisabled: {
+        opacity: 0.5,
+    },
+    googleButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.light.foreground,
+        letterSpacing: 0.3,
     },
     signupContainer: {
         flexDirection: 'row',
