@@ -46,6 +46,18 @@ export default function GiftQuizScreen() {
     const isFirstStep = currentStepIndex === 0;
     const isLastStep = currentStepIndex === QUIZ_DATA.length - 1;
 
+    const navigateToSuccess = useCallback(() => {
+        router.replace({
+            pathname: '/success',
+            params: {
+                title: 'All set',
+                description: 'Your updates are saved. Givio will use this to fine-tune your gift ideas.',
+                buttonText: 'Continue',
+                redirectTo: '/(tabs)',
+            },
+        });
+    }, [router]);
+
     const handleBack = useCallback(() => {
         if (isFirstStep) {
             router.back();
@@ -67,19 +79,19 @@ export default function GiftQuizScreen() {
 
     const handleNext = useCallback(() => {
         if (isLastStep) {
-            router.back();
+            navigateToSuccess();
         } else {
             setCurrentStepIndex((prev) => prev + 1);
         }
-    }, [isLastStep, answers, router]);
+    }, [isLastStep, navigateToSuccess]);
 
     const handleSkipQuestion = useCallback(() => {
         if (isLastStep) {
-            router.back();
+            navigateToSuccess();
         } else {
             setCurrentStepIndex((prev) => prev + 1);
         }
-    }, [isLastStep, router]);
+    }, [isLastStep, navigateToSuccess]);
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

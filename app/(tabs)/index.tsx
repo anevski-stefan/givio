@@ -1,14 +1,22 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView } from 'react-native';
+import React, { useMemo, useCallback } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors from '@/constants/Colors';
 import LogoIcon from '@/components/icons/LogoIcon';
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const router = useRouter();
 
-  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there';
+  const displayName = useMemo(() => {
+    return user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there';
+  }, [user?.user_metadata?.full_name, user?.email]);
+
+  const handleTakeQuiz = useCallback(() => {
+    router.push('/gift-quiz' as Parameters<typeof router.push>[0]);
+  }, [router]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -32,17 +40,24 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
 
-          <View style={styles.actionCard}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleTakeQuiz}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Take Gift Quiz"
+          >
             <View style={styles.actionIcon}>
               <Text style={styles.actionEmoji}>🎁</Text>
             </View>
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Find a Gift</Text>
+              <Text style={styles.actionTitle}>Take Gift Quiz</Text>
               <Text style={styles.actionDescription}>
-                Get AI-powered recommendations for anyone
+                Answer a few questions to get personalized recommendations
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.actionCard}>
             <View style={styles.actionIcon}>
