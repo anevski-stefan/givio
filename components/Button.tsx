@@ -12,7 +12,7 @@ import Colors from '@/constants/Colors';
 interface ButtonProps {
     title: string;
     onPress: () => void;
-    variant?: 'primary' | 'secondary' | 'ghost';
+    variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
     disabled?: boolean;
     loading?: boolean;
     style?: ViewStyle;
@@ -42,6 +42,7 @@ export default function Button({
             variant === 'primary' && styles.primaryButton,
             variant === 'secondary' && styles.secondaryButton,
             variant === 'ghost' && styles.ghostButton,
+            variant === 'destructive' && styles.destructiveButton,
             isDisabled && styles.disabledButton,
             style,
         ],
@@ -54,6 +55,7 @@ export default function Button({
             variant === 'primary' && styles.primaryText,
             variant === 'secondary' && styles.secondaryText,
             variant === 'ghost' && styles.ghostText,
+            variant === 'destructive' && styles.destructiveText,
             isDisabled && styles.disabledText,
             textStyle,
         ],
@@ -61,10 +63,11 @@ export default function Button({
     );
 
     const spinnerColor = useMemo(
-        () =>
-            variant === 'primary'
-                ? Colors.light.primaryForeground
-                : Colors.light.primary,
+        () => {
+            if (variant === 'primary') return Colors.light.primaryForeground;
+            if (variant === 'destructive') return Colors.light.destructive;
+            return Colors.light.primary;
+        },
         [variant]
     );
 
@@ -108,6 +111,9 @@ const styles = StyleSheet.create({
     ghostButton: {
         backgroundColor: 'transparent',
     },
+    destructiveButton: {
+        backgroundColor: Colors.light.destructive,
+    },
     disabledButton: {
         opacity: 0.5,
     },
@@ -124,6 +130,9 @@ const styles = StyleSheet.create({
     },
     ghostText: {
         color: Colors.light.primary,
+    },
+    destructiveText: {
+        color: Colors.light.destructiveForeground,
     },
     disabledText: {
     },

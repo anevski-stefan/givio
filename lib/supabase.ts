@@ -2,6 +2,7 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
+import { Database } from '@/types/database';
 
 const supabaseUrl = SUPABASE_URL || '';
 const supabaseAnonKey = SUPABASE_ANON_KEY || '';
@@ -16,7 +17,7 @@ if (!isConfigured) {
     );
 }
 
-export const supabase: SupabaseClient = createClient(
+export const supabase: SupabaseClient<Database> = createClient<Database>(
     supabaseUrl || 'https://placeholder.supabase.co',
     supabaseAnonKey || 'placeholder-key',
     {

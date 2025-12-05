@@ -20,6 +20,7 @@ import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -33,10 +34,13 @@ interface FormData {
 interface FormErrors {
     email?: string;
     password?: string;
+    general?: string;
 }
 
 export default function LoginScreen() {
     const router = useRouter();
+    const { signInWithEmail, signInWithMagicLink } = useAuth();
+
     const [formData, setFormData] = useState<FormData>({
         email: '',
         password: '',
@@ -44,6 +48,7 @@ export default function LoginScreen() {
     const [errors, setErrors] = useState<FormErrors>({});
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
 
     const createSessionFromUrl = useCallback(async (url: string) => {
         const { params, errorCode } = QueryParams.getQueryParams(url);
@@ -84,16 +89,15 @@ export default function LoginScreen() {
             if (res.type === 'success') {
                 const { url } = res;
                 await createSessionFromUrl(url);
-                router.replace('/(tabs)');
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Google sign in failed';
             console.error('Google login error:', errorMessage);
-            setErrors({ email: errorMessage });
+            setErrors({ general: errorMessage });
         } finally {
             setIsGoogleLoading(false);
         }
-    }, [isGoogleLoading, isLoading, createSessionFromUrl, router]);
+    }, [isGoogleLoading, isLoading, createSessionFromUrl]);
 
     const validateEmail = useCallback((email: string): boolean => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -127,28 +131,73 @@ export default function LoginScreen() {
         }
 
         setIsLoading(true);
+        setErrors({});
 
         try {
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-            console.log('Login successful', formData);
+            const { error } = await signInWithEmail(formData.email, formData.password);
+
+            if (error) {
+                if (error.message.includes('Invalid login credentials')) {
+                    setErrors({ general: 'Invalid email or password' });
+                } else if (error.message.includes('Email not confirmed')) {
+                    setErrors({ general: 'Please verify your email address first' });
+                } else {
+                    setErrors({ general: error.message });
+                }
+            }
         } catch (error) {
             console.error('Login error:', error);
             setErrors({
-                email: 'Invalid email or password',
+                general: 'An unexpected error occurred. Please try again.',
             });
         } finally {
             setIsLoading(false);
         }
-    }, [formData, validateForm]);
+    }, [formData, validateForm, signInWithEmail]);
+
+    const handleMagicLink = useCallback(async () => {
+        Keyboard.dismiss();
+
+        if (!formData.email.trim()) {
+            setErrors({ email: 'Email address is required' });
+            return;
+        }
+
+        if (!validateEmail(formData.email)) {
+            setErrors({ email: 'Please enter a valid email address' });
+            return;
+        }
+
+        setIsLoading(true);
+        setErrors({});
+
+        try {
+            const { error } = await signInWithMagicLink(formData.email);
+
+            if (error) {
+                setErrors({ general: error.message });
+            } else {
+                setIsMagicLinkSent(true);
+            }
+        } catch (error) {
+            console.error('Magic link error:', error);
+            setErrors({
+                general: 'Failed to send magic link. Please try again.',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [formData.email, validateEmail, signInWithMagicLink]);
 
     const handleEmailChange = useCallback((email: string) => {
         setFormData((prev) => ({ ...prev, email }));
-        setErrors((prev) => ({ ...prev, email: undefined }));
+        setErrors((prev) => ({ ...prev, email: undefined, general: undefined }));
+        setIsMagicLinkSent(false);
     }, []);
 
     const handlePasswordChange = useCallback((password: string) => {
         setFormData((prev) => ({ ...prev, password }));
-        setErrors((prev) => ({ ...prev, password: undefined }));
+        setErrors((prev) => ({ ...prev, password: undefined, general: undefined }));
     }, []);
 
     const handleForgotPassword = useCallback(() => {
@@ -190,6 +239,22 @@ export default function LoginScreen() {
                         </View>
 
                         <View style={styles.form}>
+                            {isMagicLinkSent && (
+                                <View style={styles.successContainer}>
+                                    <Text style={styles.successText} accessibilityRole="alert">
+                                        ✅ Magic link sent! Check your email inbox.
+                                    </Text>
+                                </View>
+                            )}
+
+                            {errors.general && (
+                                <View style={styles.errorContainer}>
+                                    <Text style={styles.generalError} accessibilityRole="alert">
+                                        {errors.general}
+                                    </Text>
+                                </View>
+                            )}
+
                             <View style={styles.inputsContainer}>
                                 <TextInput
                                     label="Email address"
@@ -218,18 +283,33 @@ export default function LoginScreen() {
                                     editable={!isAnyLoading}
                                 />
 
-                                <TouchableOpacity
-                                    style={styles.forgotPassword}
-                                    accessible={true}
-                                    accessibilityRole="link"
-                                    accessibilityLabel="Forgot password"
-                                    onPress={handleForgotPassword}
-                                    disabled={isAnyLoading}
-                                >
-                                    <Text style={styles.forgotPasswordText}>
-                                        Forgot Password?
-                                    </Text>
-                                </TouchableOpacity>
+                                <View style={styles.passwordActions}>
+                                    <TouchableOpacity
+                                        style={styles.magicLinkButton}
+                                        accessible={true}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Send magic link"
+                                        onPress={handleMagicLink}
+                                        disabled={isAnyLoading}
+                                    >
+                                        <Text style={styles.magicLinkText}>
+                                            Send magic link
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.forgotPassword}
+                                        accessible={true}
+                                        accessibilityRole="link"
+                                        accessibilityLabel="Forgot password"
+                                        onPress={handleForgotPassword}
+                                        disabled={isAnyLoading}
+                                    >
+                                        <Text style={styles.forgotPasswordText}>
+                                            Forgot Password?
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
 
                             <View style={styles.bottomSection}>
@@ -337,10 +417,24 @@ const styles = StyleSheet.create({
     bottomSection: {
         width: '100%',
     },
-    forgotPassword: {
-        alignSelf: 'flex-end',
+    passwordActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 24,
         marginTop: -8,
+    },
+    magicLinkButton: {
+        paddingVertical: 4,
+    },
+    magicLinkText: {
+        fontSize: 14,
+        color: Colors.light.primary,
+        fontWeight: '500',
+        letterSpacing: 0.2,
+    },
+    forgotPassword: {
+        paddingVertical: 4,
     },
     forgotPasswordText: {
         fontSize: 14,
@@ -403,5 +497,33 @@ const styles = StyleSheet.create({
         color: Colors.light.primary,
         fontWeight: '600',
         letterSpacing: 0.2,
+    },
+    successContainer: {
+        marginBottom: 16,
+        padding: 12,
+        backgroundColor: Colors.light.success + '20',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: Colors.light.success,
+    },
+    successText: {
+        fontSize: 14,
+        color: Colors.light.successForeground,
+        textAlign: 'center',
+        fontWeight: '500',
+    },
+    errorContainer: {
+        marginBottom: 16,
+        padding: 12,
+        backgroundColor: Colors.light.destructive + '15',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: Colors.light.destructive + '30',
+    },
+    generalError: {
+        fontSize: 14,
+        color: Colors.light.destructive,
+        textAlign: 'center',
+        fontWeight: '500',
     },
 });

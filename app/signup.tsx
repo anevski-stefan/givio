@@ -15,7 +15,7 @@ import LogoIcon from '@/components/icons/LogoIcon';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FormData {
     fullName: string;
@@ -32,6 +32,8 @@ interface FormErrors {
 
 export default function SignupScreen() {
     const router = useRouter();
+    const { signUpWithEmail } = useAuth();
+
     const [formData, setFormData] = useState<FormData>({
         fullName: '',
         email: '',
@@ -89,15 +91,11 @@ export default function SignupScreen() {
         setErrors({});
 
         try {
-            const { data, error } = await supabase.auth.signUp({
-                email: formData.email.trim(),
-                password: formData.password,
-                options: {
-                    data: {
-                        full_name: formData.fullName.trim(),
-                    },
-                },
-            });
+            const { error } = await signUpWithEmail(
+                formData.email,
+                formData.password,
+                formData.fullName
+            );
 
             if (error) {
                 if (error.message.includes('already registered')) {
@@ -110,10 +108,6 @@ export default function SignupScreen() {
                     });
                 }
                 return;
-            }
-
-            if (data?.user) {
-                router.replace('/(tabs)');
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
