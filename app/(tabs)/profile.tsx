@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
     StyleSheet,
     View,
@@ -6,25 +6,27 @@ import {
     ScrollView,
     TouchableOpacity,
     Alert,
+    Switch,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors from '@/constants/Colors';
-import Button from '@/components/Button';
 
 export default function ProfileScreen() {
     const { user, signOut } = useAuth();
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
-    const displayName = user?.user_metadata?.full_name || 'User';
-    const email = user?.email || '';
-    const createdAt = user?.created_at
-        ? new Date(user.created_at).toLocaleDateString('en-US', {
-            month: 'long',
-            year: 'numeric',
-        })
-        : '';
+    const [occasionReminders, setOccasionReminders] = useState(true);
+    const [giftIdeas, setGiftIdeas] = useState(false);
+    const [emailUpdates, setEmailUpdates] = useState(false);
+
+    const displayName = user?.user_metadata?.full_name || 'Alex Johnson';
+    const email = user?.email || 'alex.johnson@example.com';
+    const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
 
     const handleSignOut = useCallback(async () => {
         Alert.alert(
@@ -58,6 +60,10 @@ export default function ProfileScreen() {
         );
     }, [signOut]);
 
+    const handleBack = useCallback(() => {
+        router.back();
+    }, [router]);
+
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <ScrollView
@@ -66,77 +72,99 @@ export default function ProfileScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={handleBack}
+                        style={styles.backButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go back"
+                    >
+                        <Ionicons name="chevron-back" size={24} color={Colors.light.foreground} />
+                    </TouchableOpacity>
                     <Text style={styles.headerTitle}>Profile</Text>
+                    <View style={styles.headerSpacer} />
                 </View>
-                <View style={styles.profileCard}>
+
+                <View style={styles.profileSection}>
                     <View style={styles.avatarContainer}>
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>
-                                {displayName.charAt(0).toUpperCase()}
-                            </Text>
-                        </View>
+                        {avatarUrl ? (
+                            <Image
+                                source={{ uri: avatarUrl }}
+                                style={styles.avatarImage}
+                                accessibilityLabel="Profile picture"
+                            />
+                        ) : (
+                            <View style={styles.avatar}>
+                                <Feather name="user" size={32} color={Colors.light.primary} />
+                            </View>
+                        )}
                     </View>
-                    <Text style={styles.displayName}>{displayName}</Text>
-                    <Text style={styles.email}>{email}</Text>
-                    {createdAt && (
-                        <Text style={styles.memberSince}>Member since {createdAt}</Text>
-                    )}
+                    <View style={styles.profileInfo}>
+                        <Text style={styles.displayName}>{displayName}</Text>
+                        <Text style={styles.memberLabel}>Givio member</Text>
+                    </View>
                 </View>
+
+                <View style={styles.fieldSection}>
+                    <EditableField
+                        label="Name"
+                        value={displayName}
+                        onEdit={() => { }}
+                    />
+                    <EditableField
+                        label="Email"
+                        value={email}
+                        onEdit={() => { }}
+                    />
+                </View>
+
+                <View style={styles.divider} />
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account</Text>
 
                     <MenuItem
-                        icon="user"
-                        title="Edit Profile"
-                        subtitle="Update your personal information"
+                        icon={<Ionicons name="settings-outline" size={22} color={Colors.light.mutedForeground} />}
+                        title="App settings"
+                        subtitle="Preferences, appearance, and more"
                         onPress={() => { }}
+                        showChevron
                     />
                     <MenuItem
-                        icon="bell"
-                        title="Notifications"
-                        subtitle="Manage notification preferences"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="lock"
-                        title="Privacy & Security"
-                        subtitle="Password and data settings"
-                        onPress={() => { }}
-                    />
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Support</Text>
-
-                    <MenuItem
-                        icon="question-circle"
-                        title="Help Center"
-                        subtitle="Get answers to common questions"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="envelope"
-                        title="Contact Us"
-                        subtitle="Send us feedback or report issues"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="info-circle"
-                        title="About Givio"
-                        subtitle="Version 1.0.0"
-                        onPress={() => { }}
-                    />
-                </View>
-
-                <View style={styles.signOutSection}>
-                    <Button
-                        title="Sign Out"
+                        icon={<Feather name="log-out" size={22} color={Colors.light.destructive} />}
+                        title="Sign out"
+                        titleColor={Colors.light.destructive}
+                        subtitle="Log out of your Givio account"
                         onPress={handleSignOut}
                         loading={isLoading}
-                        disabled={isLoading}
-                        variant="destructive"
-                        style={styles.signOutButton}
+                    />
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Notifications</Text>
+                    <Text style={styles.sectionSubtitle}>Stay on top of important dates</Text>
+
+                    <ToggleItem
+                        icon={<Ionicons name="notifications-outline" size={22} color={Colors.light.mutedForeground} />}
+                        title="Occasion reminders"
+                        subtitle="Birthdays, anniversaries, and holidays"
+                        value={occasionReminders}
+                        onValueChange={setOccasionReminders}
+                    />
+                    <ToggleItem
+                        icon={<MaterialCommunityIcons name="lightbulb-on-outline" size={22} color={Colors.light.mutedForeground} />}
+                        title="Gift ideas"
+                        subtitle="Smart suggestions and follow-ups"
+                        value={giftIdeas}
+                        onValueChange={setGiftIdeas}
+                    />
+                    <ToggleItem
+                        icon={<Ionicons name="mail-outline" size={22} color={Colors.light.mutedForeground} />}
+                        title="Email updates"
+                        subtitle="Occasional roundups and tips"
+                        value={emailUpdates}
+                        onValueChange={setEmailUpdates}
                     />
                 </View>
             </ScrollView>
@@ -144,35 +172,104 @@ export default function ProfileScreen() {
     );
 }
 
-interface MenuItemProps {
-    icon: React.ComponentProps<typeof FontAwesome>['name'];
-    title: string;
-    subtitle: string;
-    onPress: () => void;
+interface EditableFieldProps {
+    label: string;
+    value: string;
+    onEdit: () => void;
 }
 
-function MenuItem({ icon, title, subtitle, onPress }: MenuItemProps) {
+function EditableField({ label, value, onEdit }: EditableFieldProps) {
+    return (
+        <View style={styles.fieldContainer}>
+            <View style={styles.fieldHeader}>
+                <Text style={styles.fieldLabel}>{label}</Text>
+                <TouchableOpacity
+                    onPress={onEdit}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${label}`}
+                >
+                    <Text style={styles.editableText}>Editable</Text>
+                </TouchableOpacity>
+            </View>
+            <View style={styles.fieldInput}>
+                <Text style={styles.fieldValue}>{value}</Text>
+            </View>
+        </View>
+    );
+}
+
+interface MenuItemProps {
+    icon: React.ReactNode;
+    title: string;
+    titleColor?: string;
+    subtitle: string;
+    onPress: () => void;
+    showChevron?: boolean;
+    loading?: boolean;
+}
+
+function MenuItem({ icon, title, titleColor, subtitle, onPress, showChevron, loading }: MenuItemProps) {
     return (
         <TouchableOpacity
             style={styles.menuItem}
             onPress={onPress}
+            disabled={loading}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel={title}
         >
             <View style={styles.menuIconContainer}>
-                <FontAwesome name={icon} size={20} color={Colors.light.mutedForeground} />
+                {icon}
+            </View>
+            <View style={styles.menuContent}>
+                <Text style={[styles.menuTitle, titleColor && { color: titleColor }]}>{title}</Text>
+                <Text style={styles.menuSubtitle}>{subtitle}</Text>
+            </View>
+            {showChevron && (
+                <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={Colors.light.mutedForeground}
+                />
+            )}
+        </TouchableOpacity>
+    );
+}
+
+interface ToggleItemProps {
+    icon: React.ReactNode;
+    title: string;
+    subtitle: string;
+    value: boolean;
+    onValueChange: (value: boolean) => void;
+}
+
+function ToggleItem({ icon, title, subtitle, value, onValueChange }: ToggleItemProps) {
+    const trackColor = useMemo(() => ({
+        false: Colors.light.border,
+        true: Colors.light.primary,
+    }), []);
+
+    return (
+        <View style={styles.toggleItem}>
+            <View style={styles.menuIconContainer}>
+                {icon}
             </View>
             <View style={styles.menuContent}>
                 <Text style={styles.menuTitle}>{title}</Text>
                 <Text style={styles.menuSubtitle}>{subtitle}</Text>
             </View>
-            <FontAwesome
-                name="chevron-right"
-                size={14}
-                color={Colors.light.mutedForeground}
+            <Switch
+                value={value}
+                onValueChange={onValueChange}
+                trackColor={trackColor}
+                thumbColor={Colors.light.white}
+                ios_backgroundColor={Colors.light.border}
+                accessibilityRole="switch"
+                accessibilityLabel={title}
+                accessibilityState={{ checked: value }}
             />
-        </TouchableOpacity>
+        </View>
     );
 }
 
@@ -185,84 +282,131 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         paddingBottom: 40,
     },
     header: {
-        paddingVertical: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'flex-start',
     },
     headerTitle: {
-        fontSize: 28,
-        fontWeight: '700',
+        flex: 1,
+        fontSize: 20,
+        fontWeight: '600',
         color: Colors.light.foreground,
-        letterSpacing: -0.5,
+        textAlign: 'center',
+        marginRight: 40, // Offset for back button
     },
-    profileCard: {
-        backgroundColor: Colors.light.white,
-        borderRadius: 20,
-        padding: 24,
+    headerSpacer: {
+        width: 0,
+    },
+    profileSection: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 24,
-        borderWidth: 1,
-        borderColor: Colors.light.border,
+        paddingVertical: 16,
     },
     avatarContainer: {
-        marginBottom: 16,
+        marginRight: 16,
     },
     avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: Colors.light.primary,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: Colors.light.secondary,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: Colors.light.primary,
     },
-    avatarText: {
-        fontSize: 32,
-        fontWeight: '700',
-        color: Colors.light.primaryForeground,
+    avatarImage: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        borderWidth: 1.5,
+        borderColor: Colors.light.primary,
+    },
+    profileInfo: {
+        flex: 1,
     },
     displayName: {
-        fontSize: 22,
-        fontWeight: '700',
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.light.foreground,
+        marginBottom: 2,
+    },
+    memberLabel: {
+        fontSize: 14,
+        color: Colors.light.mutedForeground,
+    },
+    fieldSection: {
+        marginTop: 8,
+    },
+    fieldContainer: {
+        marginBottom: 16,
+    },
+    fieldHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    fieldLabel: {
+        fontSize: 14,
+        color: Colors.light.mutedForeground,
+    },
+    editableText: {
+        fontSize: 14,
+        color: Colors.light.primary,
+        fontWeight: '500',
+    },
+    fieldInput: {
+        backgroundColor: Colors.light.white,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: Colors.light.border,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+    },
+    fieldValue: {
+        fontSize: 16,
+        color: Colors.light.foreground,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: Colors.light.border,
+        marginVertical: 20,
+    },
+    section: {
+        marginBottom: 4,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
         color: Colors.light.foreground,
         marginBottom: 4,
     },
-    email: {
+    sectionSubtitle: {
         fontSize: 14,
         color: Colors.light.mutedForeground,
-        marginBottom: 8,
-    },
-    memberSince: {
-        fontSize: 12,
-        color: Colors.light.mutedForeground,
-    },
-    section: {
-        marginBottom: 24,
-    },
-    sectionTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: Colors.light.mutedForeground,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginBottom: 12,
+        marginBottom: 16,
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.light.white,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 8,
-        borderWidth: 1,
-        borderColor: Colors.light.border,
+        paddingVertical: 14,
     },
     menuIconContainer: {
         width: 40,
         height: 40,
-        borderRadius: 10,
-        backgroundColor: Colors.light.secondary,
+        borderRadius: 20,
+        backgroundColor: 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
@@ -272,7 +416,7 @@ const styles = StyleSheet.create({
     },
     menuTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '500',
         color: Colors.light.foreground,
         marginBottom: 2,
     },
@@ -280,12 +424,9 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: Colors.light.mutedForeground,
     },
-    signOutSection: {
-        marginTop: 8,
-    },
-    signOutButton: {
-        backgroundColor: Colors.light.destructive + '10',
-        borderWidth: 1,
-        borderColor: Colors.light.destructive + '30',
+    toggleItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
     },
 });
