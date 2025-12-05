@@ -103,7 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 return { error: { message: 'Supabase not configured', name: 'ConfigError' } as AuthError };
             }
 
-            const { error } = await supabase.auth.signUp({
+            const { data, error } = await supabase.auth.signUp({
                 email: email.trim(),
                 password,
                 options: fullName
@@ -114,6 +114,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     }
                     : undefined,
             });
+
+            if (!error && data?.user?.identities?.length === 0) {
+                return {
+                    error: {
+                        message: 'This email is already registered. Please log in or use a different email.',
+                        name: 'AuthApiError'
+                    } as AuthError
+                };
+            }
 
             return { error };
         },

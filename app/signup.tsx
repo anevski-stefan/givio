@@ -41,6 +41,7 @@ export default function SignupScreen() {
     });
     const [errors, setErrors] = useState<FormErrors>({});
     const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const isSubmittingRef = useRef(false);
 
     const validateEmail = useCallback((email: string): boolean => {
@@ -98,9 +99,24 @@ export default function SignupScreen() {
             );
 
             if (error) {
-                if (error.message.includes('already registered')) {
+                const errorMsg = error.message.toLowerCase();
+                if (
+                    errorMsg.includes('already registered') ||
+                    errorMsg.includes('already exists') ||
+                    errorMsg.includes('already in use') ||
+                    errorMsg.includes('user already registered')
+                ) {
                     setErrors({
                         email: 'This email is already registered',
+                        general: 'An account with this email already exists. Please log in instead.',
+                    });
+                } else if (errorMsg.includes('invalid email')) {
+                    setErrors({
+                        email: 'Please enter a valid email address',
+                    });
+                } else if (errorMsg.includes('password')) {
+                    setErrors({
+                        password: error.message,
                     });
                 } else {
                     setErrors({
@@ -109,6 +125,8 @@ export default function SignupScreen() {
                 }
                 return;
             }
+
+            setIsSuccess(true);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
             setErrors({
@@ -118,7 +136,7 @@ export default function SignupScreen() {
             setIsLoading(false);
             isSubmittingRef.current = false;
         }
-    }, [formData.fullName, formData.email, formData.password, validateForm, isLoading, router]);
+    }, [formData.fullName, formData.email, formData.password, validateForm, isLoading, signUpWithEmail]);
 
     const handleFullNameChange = useCallback((fullName: string) => {
         setFormData((prev) => ({ ...prev, fullName }));
@@ -167,98 +185,126 @@ export default function SignupScreen() {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.container}>
-                        <View style={styles.logoContainer}>
-                            <LogoIcon
-                                size={80}
-                                accessible={true}
-                                accessibilityLabel="Givio logo"
-                            />
-                        </View>
+                        {!isSuccess && (
+                            <>
+                                <View style={styles.logoContainer}>
+                                    <LogoIcon
+                                        size={80}
+                                        accessible={true}
+                                        accessibilityLabel="Givio logo"
+                                    />
+                                </View>
 
-                        <View style={styles.header}>
-                            <Text style={styles.title}>Create account</Text>
-                            <Text style={styles.subtitle}>
-                                Join your personal gift concierge
-                            </Text>
-                        </View>
+                                <View style={styles.header}>
+                                    <Text style={styles.title}>Create account</Text>
+                                    <Text style={styles.subtitle}>
+                                        Join your personal gift concierge
+                                    </Text>
+                                </View>
+                            </>
+                        )}
 
                         <View style={styles.form}>
-                            {errors.general && (
-                                <View style={styles.errorContainer}>
-                                    <Text style={styles.generalError} accessibilityRole="alert">
-                                        {errors.general}
+                            {isSuccess ? (
+                                <View style={styles.successScreen}>
+                                    <View style={styles.successIconContainer}>
+                                        <Text style={styles.successIcon}>✅</Text>
+                                    </View>
+                                    <Text style={styles.successTitle}>Account Created!</Text>
+                                    <Text style={styles.successMessage}>
+                                        We've sent a verification link to{'\n'}
+                                        <Text style={styles.successEmail}>{formData.email}</Text>
                                     </Text>
-                                </View>
-                            )}
-
-                            <View style={styles.inputsContainer}>
-                                <TextInput
-                                    label="Full Name"
-                                    placeholder="Enter your name"
-                                    value={formData.fullName}
-                                    onChangeText={handleFullNameChange}
-                                    error={errors.fullName}
-                                    autoCapitalize="words"
-                                    autoComplete="name"
-                                    textContentType="name"
-                                    editable={!isLoading}
-                                />
-
-                                <TextInput
-                                    label="Email address"
-                                    placeholder="name@example.com"
-                                    value={formData.email}
-                                    onChangeText={handleEmailChange}
-                                    error={errors.email}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    autoComplete="email"
-                                    textContentType="emailAddress"
-                                    editable={!isLoading}
-                                />
-
-                                <TextInput
-                                    label="Password"
-                                    placeholder="Create a password"
-                                    value={formData.password}
-                                    onChangeText={handlePasswordChange}
-                                    error={errors.password}
-                                    secureTextEntry={true}
-                                    showPasswordToggle={true}
-                                    autoCapitalize="none"
-                                    autoComplete="new-password"
-                                    textContentType="newPassword"
-                                    editable={!isLoading}
-                                />
-                            </View>
-
-                            <View style={styles.bottomSection}>
-                                <Button
-                                    title="Sign Up"
-                                    onPress={handleSignup}
-                                    loading={isLoading}
-                                    disabled={isLoading}
-                                    style={styles.signupButton}
-                                    accessibilityHint="Create a new account"
-                                />
-
-                                <View style={styles.loginContainer}>
-                                    <Text style={styles.loginText}>
-                                        Already have an account?{' '}
+                                    <Text style={styles.successHint}>
+                                        Please check your email and click the link to verify your account before logging in.
                                     </Text>
-                                    <TouchableOpacity
-                                        accessible={true}
-                                        accessibilityRole="button"
-                                        accessibilityLabel="Log in to your existing account"
+                                    <Button
+                                        title="Go to Login"
                                         onPress={handleLogin}
-                                        disabled={isLoading}
-                                    >
-                                        <Text style={styles.loginLink}>
-                                            Log in
-                                        </Text>
-                                    </TouchableOpacity>
+                                        style={styles.successButton}
+                                        accessibilityHint="Navigate to login screen"
+                                    />
                                 </View>
-                            </View>
+                            ) : (
+                                <>
+                                    {errors.general && (
+                                        <View style={styles.errorContainer}>
+                                            <Text style={styles.generalError} accessibilityRole="alert">
+                                                {errors.general}
+                                            </Text>
+                                        </View>
+                                    )}
+
+                                    <View style={styles.inputsContainer}>
+                                        <TextInput
+                                            label="Full Name"
+                                            placeholder="Enter your name"
+                                            value={formData.fullName}
+                                            onChangeText={handleFullNameChange}
+                                            error={errors.fullName}
+                                            autoCapitalize="words"
+                                            autoComplete="name"
+                                            textContentType="name"
+                                            editable={!isLoading}
+                                        />
+
+                                        <TextInput
+                                            label="Email address"
+                                            placeholder="name@example.com"
+                                            value={formData.email}
+                                            onChangeText={handleEmailChange}
+                                            error={errors.email}
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                            autoComplete="email"
+                                            textContentType="emailAddress"
+                                            editable={!isLoading}
+                                        />
+
+                                        <TextInput
+                                            label="Password"
+                                            placeholder="Create a password"
+                                            value={formData.password}
+                                            onChangeText={handlePasswordChange}
+                                            error={errors.password}
+                                            secureTextEntry={true}
+                                            showPasswordToggle={true}
+                                            autoCapitalize="none"
+                                            autoComplete="new-password"
+                                            textContentType="newPassword"
+                                            editable={!isLoading}
+                                        />
+                                    </View>
+
+                                    <View style={styles.bottomSection}>
+                                        <Button
+                                            title="Sign Up"
+                                            onPress={handleSignup}
+                                            loading={isLoading}
+                                            disabled={isLoading}
+                                            style={styles.signupButton}
+                                            accessibilityHint="Create a new account"
+                                        />
+
+                                        <View style={styles.loginContainer}>
+                                            <Text style={styles.loginText}>
+                                                Already have an account?{' '}
+                                            </Text>
+                                            <TouchableOpacity
+                                                accessible={true}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="Log in to your existing account"
+                                                onPress={handleLogin}
+                                                disabled={isLoading}
+                                            >
+                                                <Text style={styles.loginLink}>
+                                                    Log in
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                </>
+                            )}
                         </View>
                     </View>
                 </ScrollView>
@@ -346,5 +392,52 @@ const styles = StyleSheet.create({
         color: Colors.light.destructive || '#ef4444',
         textAlign: 'center',
         fontWeight: '500',
+    },
+    successScreen: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 40,
+    },
+    successIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: Colors.light.success + '30',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
+    },
+    successIcon: {
+        fontSize: 40,
+    },
+    successTitle: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: Colors.light.foreground,
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    successMessage: {
+        fontSize: 16,
+        color: Colors.light.mutedForeground,
+        textAlign: 'center',
+        marginBottom: 8,
+        lineHeight: 24,
+    },
+    successEmail: {
+        fontWeight: '600',
+        color: Colors.light.foreground,
+    },
+    successHint: {
+        fontSize: 14,
+        color: Colors.light.mutedForeground,
+        textAlign: 'center',
+        marginBottom: 32,
+        paddingHorizontal: 20,
+        lineHeight: 20,
+    },
+    successButton: {
+        width: '100%',
     },
 });
