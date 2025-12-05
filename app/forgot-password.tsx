@@ -131,7 +131,10 @@ export default function ForgotPasswordScreen() {
                             {isSuccess && (
                                 <View style={styles.successContainer}>
                                     <Text style={styles.successText} accessibilityRole="alert">
-                                        Check your email! We've sent you a password reset link.
+                                        If an account exists with this email, we've sent a password reset link.{'\n\n'}
+                                        <Text style={styles.successHint}>
+                                            Signed up with Google? Use "Continue with Google" on the login screen instead.
+                                        </Text>
                                     </Text>
                                 </View>
                             )}
@@ -272,5 +275,10 @@ const styles = StyleSheet.create({
         color: Colors.light.successForeground,
         textAlign: 'center',
         fontWeight: '500',
+    },
+    successHint: {
+        fontSize: 13,
+        color: Colors.light.mutedForeground,
+        fontWeight: '400',
     },
 });
