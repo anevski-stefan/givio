@@ -15,7 +15,7 @@ import LogoIcon from '@/components/icons/LogoIcon';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FormErrors {
     email?: string;
@@ -24,6 +24,8 @@ interface FormErrors {
 
 export default function ForgotPasswordScreen() {
     const router = useRouter();
+    const { resetPassword } = useAuth();
+
     const [email, setEmail] = useState('');
     const [errors, setErrors] = useState<FormErrors>({});
     const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +61,7 @@ export default function ForgotPasswordScreen() {
         setErrors({});
 
         try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+            const { error } = await resetPassword(email);
 
             if (error) {
                 setErrors({
@@ -77,7 +79,7 @@ export default function ForgotPasswordScreen() {
         } finally {
             setIsLoading(false);
         }
-    }, [email, validateForm]);
+    }, [email, validateForm, resetPassword]);
 
     const handleEmailChange = useCallback((value: string) => {
         setEmail(value);
@@ -129,7 +131,10 @@ export default function ForgotPasswordScreen() {
                             {isSuccess && (
                                 <View style={styles.successContainer}>
                                     <Text style={styles.successText} accessibilityRole="alert">
-                                        Check your email! We've sent you a password reset link.
+                                        If an account exists with this email, we've sent a password reset link.{'\n\n'}
+                                        <Text style={styles.successHint}>
+                                            Signed up with Google? Use "Continue with Google" on the login screen instead.
+                                        </Text>
                                     </Text>
                                 </View>
                             )}
@@ -270,5 +275,10 @@ const styles = StyleSheet.create({
         color: Colors.light.successForeground,
         textAlign: 'center',
         fontWeight: '500',
+    },
+    successHint: {
+        fontSize: 13,
+        color: Colors.light.mutedForeground,
+        fontWeight: '400',
     },
 });
